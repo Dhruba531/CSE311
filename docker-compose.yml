@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8000:80"
+    volumes:
+      - .:/var/www/html
+    environment:
+      - DB_HOST=db
+      - DB_NAME=stock_trading_db
+      - DB_USER=root
+      - DB_PASS=Dhruba2232537
+      - DB_CHARSET=utf8mb4
+      - APP_ENV=production
+    depends_on:
+      - db
+    networks:
+      - stock-network
+
+  db:
+    image: mysql:8.0
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: Dhruba2232537
+      MYSQL_DATABASE: stock_trading_db
+    volumes:
+      - db_data:/var/lib/mysql
+      # Auto-init database with our scripts
+      - ./database_enhanced.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./add_dummy_data.sql:/docker-entrypoint-initdb.d/02_data.sql
+      - ./add_more_triggers.sql:/docker-entrypoint-initdb.d/03_triggers.sql
+    networks:
+      - stock-network
+
+networks:
+  stock-network:
+    driver: bridge
+
+volumes:
+  db_data:
