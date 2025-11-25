@@ -10,10 +10,6 @@ RUN apt-get update && apt-get install -y \
 # Enable Apache mod_rewrite
 RUN a2enmod rewrite
 
-# Configure Apache for Cloud Run (port 8080)
-RUN sed -i 's/Listen 80/Listen 8080/' /etc/apache2/ports.conf
-RUN sed -i 's/<VirtualHost \*:80>/<VirtualHost *:8080>/' /etc/apache2/sites-available/000-default.conf
-
 # Set working directory
 WORKDIR /var/www/html
 
@@ -29,5 +25,14 @@ RUN composer install --no-dev --optimize-autoloader
 # Set permissions
 RUN chown -R www-data:www-data /var/www/html
 
-# Expose port 8080 (Cloud Run requirement)
+# Copy and set up entrypoint script for Cloud Run PORT environment variable
+COPY docker-entrypoint.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/docker-entrypoint.sh
+
+# Use PORT environment variable (Cloud Run requirement, defaults to 8080)
+ENV PORT=8080
 EXPOSE 8080
+
+# Use custom entrypoint that configures Apache to listen on PORT
+ENTRYPOINT ["docker-entrypoint.sh"]
+CMD ["apache2-foreground"]
