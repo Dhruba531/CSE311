@@ -31,7 +31,7 @@ foreach ($portfolio as &$holding) {
     $holding['current_price'] = round($current_price, 2);
     $holding['total_value'] = round($holding['shares_held'] * $current_price, 2);
     $holding['gain_loss'] = round($holding['total_value'] - ($holding['shares_held'] * ($holding['avg_buy_price'] ?? 0)), 2);
-    $holding['gain_loss_pct'] = $holding['avg_buy_price'] > 0 
+    $holding['gain_loss_pct'] = $holding['avg_buy_price'] > 0
         ? round((($current_price - $holding['avg_buy_price']) / $holding['avg_buy_price']) * 100, 2)
         : 0;
     $total_value += $holding['total_value'];
@@ -39,20 +39,34 @@ foreach ($portfolio as &$holding) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Portfolio - Stock Trading</title>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+
+<body class="dashboard-page">
     <nav class="navbar">
         <div class="nav-container">
-            <h1 class="logo">📈 StockTrader</h1>
+            <h1 class="logo">
+                <span class="logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 18L7 12L11 15L15 8L19 11L21 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="7" cy="12" r="1.5" fill="currentColor"/>
+                        <circle cx="11" cy="15" r="1.5" fill="currentColor"/>
+                        <circle cx="15" cy="8" r="1.5" fill="currentColor"/>
+                        <circle cx="19" cy="11" r="1.5" fill="currentColor"/>
+                    </svg>
+                </span>
+                <span class="logo-text">StockTrader</span>
+            </h1>
             <ul class="nav-menu">
                 <li><a href="index.php">Dashboard</a></li>
                 <li><a href="stocks.php">Stocks</a></li>
                 <li><a href="buy_sell.php">Trade</a></li>
+                <li><a href="orders.php">Orders</a></li>
                 <li><a href="portfolio.php" class="active">Portfolio</a></li>
                 <li><a href="history.php">History</a></li>
                 <li><a href="watchlist.php">Watchlist</a></li>
@@ -97,7 +111,10 @@ foreach ($portfolio as &$holding) {
                     </thead>
                     <tbody>
                         <?php if (empty($portfolio)): ?>
-                            <tr><td colspan="8" class="empty-state">No holdings yet. Start trading to build your portfolio!</td></tr>
+                            <tr>
+                                <td colspan="8" class="empty-state">No holdings yet. Start trading to build your portfolio!
+                                </td>
+                            </tr>
                         <?php else: ?>
                             <?php foreach ($portfolio as $holding): ?>
                                 <tr>
@@ -111,7 +128,7 @@ foreach ($portfolio as &$holding) {
                                         $<?php echo number_format($holding['gain_loss'], 2); ?>
                                     </td>
                                     <td class="<?php echo $holding['gain_loss_pct'] >= 0 ? 'text-success' : 'text-danger'; ?>">
-                                        <?php echo $holding['gain_loss_pct'] >= 0 ? '+' : ''; ?><?php echo number_format($holding['gain_loss_pct'], 2); ?>%
+                                        <?php echo $holding['gain_loss_pct'] >= 0 ? '+' : ''; ?>        <?php echo number_format($holding['gain_loss_pct'], 2); ?>%
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -122,4 +139,5 @@ foreach ($portfolio as &$holding) {
         </div>
     </div>
 </body>
+
 </html>

@@ -65,11 +65,18 @@ $regions = $stmt->fetchAll();
     <link rel="stylesheet" href="styles.css">
 </head>
 
-<body class="auth-page">
+<body class="auth-page dark-theme">
     <div class="auth-container">
         <div class="auth-card">
-            <h1 class="auth-title">📈 StockTrader</h1>
-            <h2>Create Your Account</h2>
+            <div class="auth-header">
+                <div class="logo-container">
+                    <svg class="logo-icon" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 12L12 3L21 12L12 21L3 12Z" stroke="currentColor" stroke-width="2" fill="none"/>
+                    </svg>
+                    <span class="logo-text">StockTrader</span>
+                </div>
+                <h2>Create Your Account</h2>
+            </div>
 
             <?php if ($error): ?>
                 <div class="alert alert-error"><?php echo htmlspecialchars($error); ?></div>

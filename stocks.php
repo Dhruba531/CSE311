@@ -73,15 +73,19 @@ $search = trim($_GET['search'] ?? '');
 $sort = $_GET['sort'] ?? 'name_asc';
 
 $query = "
-    SELECT s.*, b.company_name as business_name, b.year_established, r.region_name
+    SELECT s.*, b.company_name as business_name, b.year_established, r.region_name,
+           sp.current_price, sp.previous_close
     FROM Stock s
     LEFT JOIN Business b ON s.business_id = b.business_id
     LEFT JOIN Region r ON b.region_id = r.region_id
+    LEFT JOIN StockPrice sp ON s.ticker_symbol = sp.ticker_symbol
+    WHERE r.region_name = 'North America'
 ";
 
 $params = [];
 if (!empty($search)) {
-    $query .= " WHERE s.ticker_symbol LIKE ? OR s.company_name LIKE ?";
+    $query .= " AND (s.ticker_symbol LIKE ? OR s.company_name LIKE ? OR b.company_name LIKE ?)";
+    $params[] = "%$search%";
     $params[] = "%$search%";
     $params[] = "%$search%";
 }
@@ -95,6 +99,18 @@ switch ($sort) {
         break;
     case 'ticker_desc':
         $query .= " ORDER BY s.ticker_symbol DESC";
+        break;
+    case 'year_asc':
+        $query .= " ORDER BY b.year_established ASC";
+        break;
+    case 'year_desc':
+        $query .= " ORDER BY b.year_established DESC";
+        break;
+    case 'price_change_high':
+        $query .= " ORDER BY (sp.current_price - sp.previous_close) DESC";
+        break;
+    case 'price_change_low':
+        $query .= " ORDER BY (sp.current_price - sp.previous_close) ASC";
         break;
     default: // name_asc
         $query .= " ORDER BY s.company_name ASC";
@@ -132,14 +148,27 @@ foreach ($stocks as $stock) {
     <link rel="stylesheet" href="styles.css">
 </head>
 
-<body>
+<body class="dashboard-page">
     <nav class="navbar">
         <div class="nav-container">
-            <h1 class="logo">📈 StockTrader</h1>
+            <h1 class="logo">
+                <span class="logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 18L7 12L11 15L15 8L19 11L21 9" stroke="currentColor" stroke-width="2.5"
+                            stroke-linecap="round" stroke-linejoin="round" />
+                        <circle cx="7" cy="12" r="1.5" fill="currentColor" />
+                        <circle cx="11" cy="15" r="1.5" fill="currentColor" />
+                        <circle cx="15" cy="8" r="1.5" fill="currentColor" />
+                        <circle cx="19" cy="11" r="1.5" fill="currentColor" />
+                    </svg>
+                </span>
+                <span class="logo-text">StockTrader</span>
+            </h1>
             <ul class="nav-menu">
                 <li><a href="index.php">Dashboard</a></li>
                 <li><a href="stocks.php" class="active">Stocks</a></li>
                 <li><a href="buy_sell.php">Trade</a></li>
+                <li><a href="orders.php">Orders</a></li>
                 <li><a href="portfolio.php">Portfolio</a></li>
                 <li><a href="history.php">History</a></li>
                 <li><a href="watchlist.php">Watchlist</a></li>
@@ -155,29 +184,51 @@ foreach ($stocks as $stock) {
     <div class="container">
         <div class="page-header">
             <h2>Stocks Management</h2>
-            <button class="btn btn-primary" onclick="openModal('create')">+ Add New Stock</button>
         </div>
 
-        <div class="card" style="margin-bottom: 20px; padding: 15px;">
-            <form method="GET" action="stocks.php"
-                style="display: flex; gap: 10px; align-items: center; flex-wrap: wrap;">
-                <input type="text" name="search" placeholder="Search by Symbol or Name..."
-                    value="<?php echo htmlspecialchars($search); ?>" style="flex: 1; min-width: 200px;">
+        <div class="search-filter-card">
+            <form method="GET" action="stocks.php" class="search-form">
+                <div class="search-input-wrapper">
+                    <svg class="search-icon" width="20" height="20" viewBox="0 0 24 24" fill="none"
+                        stroke="currentColor" stroke-width="2">
+                        <circle cx="11" cy="11" r="8"></circle>
+                        <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+                    </svg>
+                    <input type="text" name="search" placeholder="Search stocks..."
+                        value="<?php echo htmlspecialchars($search); ?>">
+                </div>
 
-                <select name="sort" onchange="this.form.submit()" style="width: auto;">
-                    <option value="name_asc" <?php echo $sort === 'name_asc' ? 'selected' : ''; ?>>Name (A-Z)</option>
-                    <option value="name_desc" <?php echo $sort === 'name_desc' ? 'selected' : ''; ?>>Name (Z-A)</option>
-                    <option value="ticker_asc" <?php echo $sort === 'ticker_asc' ? 'selected' : ''; ?>>Ticker (A-Z)
-                    </option>
-                    <option value="ticker_desc" <?php echo $sort === 'ticker_desc' ? 'selected' : ''; ?>>Ticker (Z-A)
-                    </option>
-                </select>
+                <div class="filter-group">
+                    <select name="sort" onchange="this.form.submit()" class="custom-select">
+                        <option value="name_asc" <?php echo $sort === 'name_asc' ? 'selected' : ''; ?>>Name (A-Z)</option>
+                        <option value="name_desc" <?php echo $sort === 'name_desc' ? 'selected' : ''; ?>>Name (Z-A)
+                        </option>
+                        <option value="ticker_asc" <?php echo $sort === 'ticker_asc' ? 'selected' : ''; ?>>Ticker (A-Z)
+                        </option>
+                        <option value="ticker_desc" <?php echo $sort === 'ticker_desc' ? 'selected' : ''; ?>>Ticker (Z-A)
+                        </option>
+                        <option value="year_asc" <?php echo $sort === 'year_asc' ? 'selected' : ''; ?>>Year (Oldest First)
+                        </option>
+                        <option value="year_desc" <?php echo $sort === 'year_desc' ? 'selected' : ''; ?>>Year (Newest
+                            First)</option>
+                        <option value="price_change_high" <?php echo $sort === 'price_change_high' ? 'selected' : ''; ?>>
+                            Price Change (High to Low)</option>
+                        <option value="price_change_low" <?php echo $sort === 'price_change_low' ? 'selected' : ''; ?>>
+                            Price Change (Low to High)</option>
+                    </select>
 
-                <button type="submit" class="btn btn-secondary">Search</button>
-                <?php if (!empty($search)): ?>
-                    <a href="stocks.php" class="btn btn-sm btn-danger"
-                        style="text-decoration: none; display: flex; align-items: center;">Clear</a>
-                <?php endif; ?>
+                    <button type="submit" class="btn btn-primary search-btn">Search</button>
+
+                    <?php if (!empty($search)): ?>
+                        <a href="stocks.php" class="btn btn-secondary clear-btn" title="Clear Search">
+                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                                stroke-width="2">
+                                <line x1="18" y1="6" x2="6" y2="18"></line>
+                                <line x1="6" y1="6" x2="18" y2="18"></line>
+                            </svg>
+                        </a>
+                    <?php endif; ?>
+                </div>
             </form>
         </div>
 
@@ -200,7 +251,7 @@ foreach ($stocks as $stock) {
                             <th>Year Established</th>
                             <th>Region</th>
                             <th>Exchanges</th>
-                            <th>Actions</th>
+                            <th>Price Change</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -229,18 +280,30 @@ foreach ($stocks as $stock) {
                                         ?>
                                     </td>
                                     <td>
-                                        <button class="btn btn-sm btn-secondary"
-                                            onclick="openModal('update', '<?php echo htmlspecialchars($stock['ticker_symbol']); ?>', '<?php echo htmlspecialchars($stock['company_name']); ?>', <?php echo $stock['business_id'] ?? 0; ?>)">
-                                            Edit
-                                        </button>
-                                        <form method="POST" style="display:inline;"
-                                            onsubmit="return confirm('Are you sure you want to delete this stock?');">
-                                            <?php csrf_field(); ?>
-                                            <input type="hidden" name="action" value="delete">
-                                            <input type="hidden" name="ticker_symbol"
-                                                value="<?php echo htmlspecialchars($stock['ticker_symbol']); ?>">
-                                            <button type="submit" class="btn btn-sm btn-danger">Delete</button>
-                                        </form>
+                                        <?php
+                                        if ($stock['current_price'] && $stock['previous_close']) {
+                                            $change = $stock['current_price'] - $stock['previous_close'];
+                                            $changePercent = ($change / $stock['previous_close']) * 100;
+
+                                            if ($change > 0) {
+                                                $color = '#22c55e'; // Green
+                                                $arrow = '▲';
+                                            } elseif ($change < 0) {
+                                                $color = '#ef4444'; // Red
+                                                $arrow = '▼';
+                                            } else {
+                                                $color = '#94a3b8'; // Gray
+                                                $arrow = '━';
+                                            }
+
+                                            echo '<span style="color: ' . $color . '; font-weight: 600;">';
+                                            echo $arrow . ' $' . number_format(abs($change), 2);
+                                            echo ' (' . number_format(abs($changePercent), 2) . '%)';
+                                            echo '</span>';
+                                        } else {
+                                            echo '<span style="color: #64748b;">N/A</span>';
+                                        }
+                                        ?>
                                     </td>
                                 </tr>
                             <?php endforeach; ?>
@@ -312,7 +375,7 @@ foreach ($stocks as $stock) {
                 document.getElementById('business_id').value = businessId;
             }
 
-            modal.style.display = 'block';
+            modal.style.display = 'flex';
         }
 
         function closeModal() {

@@ -94,20 +94,34 @@ $account = $stmt->fetch();
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analytics - Stock Trading</title>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+
+<body class="dashboard-page">
     <nav class="navbar">
         <div class="nav-container">
-            <h1 class="logo">📈 StockTrader</h1>
+            <h1 class="logo">
+                <span class="logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 18L7 12L11 15L15 8L19 11L21 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="7" cy="12" r="1.5" fill="currentColor"/>
+                        <circle cx="11" cy="15" r="1.5" fill="currentColor"/>
+                        <circle cx="15" cy="8" r="1.5" fill="currentColor"/>
+                        <circle cx="19" cy="11" r="1.5" fill="currentColor"/>
+                    </svg>
+                </span>
+                <span class="logo-text">StockTrader</span>
+            </h1>
             <ul class="nav-menu">
                 <li><a href="index.php">Dashboard</a></li>
                 <li><a href="stocks.php">Stocks</a></li>
                 <li><a href="buy_sell.php">Trade</a></li>
+                <li><a href="orders.php">Orders</a></li>
                 <li><a href="portfolio.php">Portfolio</a></li>
                 <li><a href="history.php">History</a></li>
                 <li><a href="watchlist.php">Watchlist</a></li>
@@ -150,7 +164,8 @@ $account = $stmt->fetch();
                     <div class="stat-icon">📈</div>
                     <div class="stat-info">
                         <h3>Gain/Loss</h3>
-                        <p class="stat-value <?php echo ($analytics['total_gain_loss'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
+                        <p
+                            class="stat-value <?php echo ($analytics['total_gain_loss'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
                             $<?php echo number_format($analytics['total_gain_loss'] ?? 0, 2); ?>
                         </p>
                     </div>
@@ -159,7 +174,8 @@ $account = $stmt->fetch();
                     <div class="stat-icon">📉</div>
                     <div class="stat-info">
                         <h3>Gain/Loss %</h3>
-                        <p class="stat-value <?php echo ($analytics['gain_loss_percent'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
+                        <p
+                            class="stat-value <?php echo ($analytics['gain_loss_percent'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
                             <?php echo ($analytics['gain_loss_percent'] ?? 0) >= 0 ? '+' : ''; ?>
                             <?php echo number_format($analytics['gain_loss_percent'] ?? 0, 2); ?>%
                         </p>
@@ -193,7 +209,9 @@ $account = $stmt->fetch();
                         </thead>
                         <tbody>
                             <?php if (empty($top_performers)): ?>
-                                <tr><td colspan="7" class="empty-state">No holdings yet</td></tr>
+                                <tr>
+                                    <td colspan="7" class="empty-state">No holdings yet</td>
+                                </tr>
                             <?php else: ?>
                                 <?php foreach ($top_performers as $stock): ?>
                                     <tr>
@@ -202,10 +220,12 @@ $account = $stmt->fetch();
                                         <td><?php echo number_format($stock['shares_held']); ?></td>
                                         <td>$<?php echo number_format($stock['avg_price'] ?? 0, 2); ?></td>
                                         <td>$<?php echo number_format($stock['current_price'] ?? 0, 2); ?></td>
-                                        <td class="<?php echo ($stock['gain_per_share'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
+                                        <td
+                                            class="<?php echo ($stock['gain_per_share'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
                                             $<?php echo number_format($stock['gain_per_share'] ?? 0, 2); ?>
                                         </td>
-                                        <td class="<?php echo ($stock['gain_percent'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
+                                        <td
+                                            class="<?php echo ($stock['gain_percent'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
                                             <?php echo ($stock['gain_percent'] ?? 0) >= 0 ? '+' : ''; ?>
                                             <?php echo number_format($stock['gain_percent'] ?? 0, 2); ?>%
                                         </td>
@@ -234,7 +254,9 @@ $account = $stmt->fetch();
                         </thead>
                         <tbody>
                             <?php if (empty($worst_performers)): ?>
-                                <tr><td colspan="7" class="empty-state">No holdings yet</td></tr>
+                                <tr>
+                                    <td colspan="7" class="empty-state">No holdings yet</td>
+                                </tr>
                             <?php else: ?>
                                 <?php foreach ($worst_performers as $stock): ?>
                                     <tr>
@@ -243,10 +265,12 @@ $account = $stmt->fetch();
                                         <td><?php echo number_format($stock['shares_held']); ?></td>
                                         <td>$<?php echo number_format($stock['avg_price'] ?? 0, 2); ?></td>
                                         <td>$<?php echo number_format($stock['current_price'] ?? 0, 2); ?></td>
-                                        <td class="<?php echo ($stock['gain_per_share'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
+                                        <td
+                                            class="<?php echo ($stock['gain_per_share'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
                                             $<?php echo number_format($stock['gain_per_share'] ?? 0, 2); ?>
                                         </td>
-                                        <td class="<?php echo ($stock['gain_percent'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
+                                        <td
+                                            class="<?php echo ($stock['gain_percent'] ?? 0) >= 0 ? 'text-success' : 'text-danger'; ?>">
                                             <?php echo ($stock['gain_percent'] ?? 0) >= 0 ? '+' : ''; ?>
                                             <?php echo number_format($stock['gain_percent'] ?? 0, 2); ?>%
                                         </td>
@@ -263,7 +287,8 @@ $account = $stmt->fetch();
             <h3>Transaction Statistics</h3>
             <div class="info-list">
                 <div class="info-item">
-                    <strong>Total Transactions:</strong> <?php echo number_format($tx_stats['total_transactions'] ?? 0); ?>
+                    <strong>Total Transactions:</strong>
+                    <?php echo number_format($tx_stats['total_transactions'] ?? 0); ?>
                 </div>
                 <div class="info-item">
                     <strong>Buy Orders:</strong> <?php echo number_format($tx_stats['buy_count'] ?? 0); ?>
@@ -278,11 +303,11 @@ $account = $stmt->fetch();
                     <strong>Total Sold:</strong> $<?php echo number_format($tx_stats['total_sold'] ?? 0, 2); ?>
                 </div>
                 <div class="info-item">
-                    <strong>First Transaction:</strong> 
+                    <strong>First Transaction:</strong>
                     <?php echo $tx_stats['first_transaction'] ? date('M d, Y H:i', strtotime($tx_stats['first_transaction'])) : 'N/A'; ?>
                 </div>
                 <div class="info-item">
-                    <strong>Last Transaction:</strong> 
+                    <strong>Last Transaction:</strong>
                     <?php echo $tx_stats['last_transaction'] ? date('M d, Y H:i', strtotime($tx_stats['last_transaction'])) : 'N/A'; ?>
                 </div>
             </div>
@@ -309,10 +334,12 @@ $account = $stmt->fetch();
                                     <td><?php echo date('M d, Y', strtotime($snapshot['snapshot_date'])); ?></td>
                                     <td>$<?php echo number_format($snapshot['total_value'], 2); ?></td>
                                     <td>$<?php echo number_format($snapshot['total_cost'], 2); ?></td>
-                                    <td class="<?php echo $snapshot['total_gain_loss'] >= 0 ? 'text-success' : 'text-danger'; ?>">
+                                    <td
+                                        class="<?php echo $snapshot['total_gain_loss'] >= 0 ? 'text-success' : 'text-danger'; ?>">
                                         $<?php echo number_format($snapshot['total_gain_loss'], 2); ?>
                                     </td>
-                                    <td class="<?php echo $snapshot['gain_loss_percent'] >= 0 ? 'text-success' : 'text-danger'; ?>">
+                                    <td
+                                        class="<?php echo $snapshot['gain_loss_percent'] >= 0 ? 'text-success' : 'text-danger'; ?>">
                                         <?php echo $snapshot['gain_loss_percent'] >= 0 ? '+' : ''; ?>
                                         <?php echo number_format($snapshot['gain_loss_percent'], 2); ?>%
                                     </td>
@@ -327,62 +354,62 @@ $account = $stmt->fetch();
     </div>
 
     <script>
-    function sortTable(n, tableId) {
-      var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
-      table = document.getElementById(tableId);
-      switching = true;
-      dir = "asc";
-      
-      var headers = table.getElementsByTagName("th");
-      for (i = 0; i < headers.length; i++) {
-        headers[i].classList.remove("asc", "desc");
-      }
-
-      while (switching) {
-        switching = false;
-        rows = table.rows;
-        for (i = 1; i < (rows.length - 1); i++) {
-          shouldSwitch = false;
-          x = rows[i].getElementsByTagName("TD")[n];
-          y = rows[i + 1].getElementsByTagName("TD")[n];
-          
-          var xVal = x.textContent.replace(/[$,%]/g, '').trim();
-          var yVal = y.textContent.replace(/[$,%]/g, '').trim();
-          
-          if (!isNaN(parseFloat(xVal)) && !isNaN(parseFloat(yVal))) {
-              xVal = parseFloat(xVal);
-              yVal = parseFloat(yVal);
-          } else {
-              xVal = xVal.toLowerCase();
-              yVal = yVal.toLowerCase();
-          }
-
-          if (dir == "asc") {
-            if (xVal > yVal) {
-              shouldSwitch = true;
-              break;
-            }
-          } else if (dir == "desc") {
-            if (xVal < yVal) {
-              shouldSwitch = true;
-              break;
-            }
-          }
-        }
-        if (shouldSwitch) {
-          rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-          switching = true;
-          switchcount ++;
-        } else {
-          if (switchcount == 0 && dir == "asc") {
-            dir = "desc";
+        function sortTable(n, tableId) {
+            var table, rows, switching, i, x, y, shouldSwitch, dir, switchcount = 0;
+            table = document.getElementById(tableId);
             switching = true;
-          }
+            dir = "asc";
+
+            var headers = table.getElementsByTagName("th");
+            for (i = 0; i < headers.length; i++) {
+                headers[i].classList.remove("asc", "desc");
+            }
+
+            while (switching) {
+                switching = false;
+                rows = table.rows;
+                for (i = 1; i < (rows.length - 1); i++) {
+                    shouldSwitch = false;
+                    x = rows[i].getElementsByTagName("TD")[n];
+                    y = rows[i + 1].getElementsByTagName("TD")[n];
+
+                    var xVal = x.textContent.replace(/[$,%]/g, '').trim();
+                    var yVal = y.textContent.replace(/[$,%]/g, '').trim();
+
+                    if (!isNaN(parseFloat(xVal)) && !isNaN(parseFloat(yVal))) {
+                        xVal = parseFloat(xVal);
+                        yVal = parseFloat(yVal);
+                    } else {
+                        xVal = xVal.toLowerCase();
+                        yVal = yVal.toLowerCase();
+                    }
+
+                    if (dir == "asc") {
+                        if (xVal > yVal) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    } else if (dir == "desc") {
+                        if (xVal < yVal) {
+                            shouldSwitch = true;
+                            break;
+                        }
+                    }
+                }
+                if (shouldSwitch) {
+                    rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
+                    switching = true;
+                    switchcount++;
+                } else {
+                    if (switchcount == 0 && dir == "asc") {
+                        dir = "desc";
+                        switching = true;
+                    }
+                }
+            }
+            headers[n].classList.add(dir);
         }
-      }
-      headers[n].classList.add(dir);
-    }
     </script>
 </body>
-</html>
 
+</html>

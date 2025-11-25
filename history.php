@@ -35,20 +35,34 @@ foreach ($history as $tx) {
 ?>
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Transaction History - Stock Trading</title>
     <link rel="stylesheet" href="styles.css">
 </head>
-<body>
+
+<body class="dashboard-page">
     <nav class="navbar">
         <div class="nav-container">
-            <h1 class="logo">📈 StockTrader</h1>
+            <h1 class="logo">
+                <span class="logo-icon">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M3 18L7 12L11 15L15 8L19 11L21 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+                        <circle cx="7" cy="12" r="1.5" fill="currentColor"/>
+                        <circle cx="11" cy="15" r="1.5" fill="currentColor"/>
+                        <circle cx="15" cy="8" r="1.5" fill="currentColor"/>
+                        <circle cx="19" cy="11" r="1.5" fill="currentColor"/>
+                    </svg>
+                </span>
+                <span class="logo-text">StockTrader</span>
+            </h1>
             <ul class="nav-menu">
                 <li><a href="index.php">Dashboard</a></li>
                 <li><a href="stocks.php">Stocks</a></li>
                 <li><a href="buy_sell.php">Trade</a></li>
+                <li><a href="orders.php">Orders</a></li>
                 <li><a href="portfolio.php">Portfolio</a></li>
                 <li><a href="history.php" class="active">History</a></li>
                 <li><a href="watchlist.php">Watchlist</a></li>
@@ -97,7 +111,9 @@ foreach ($history as $tx) {
                     </thead>
                     <tbody>
                         <?php if (empty($history)): ?>
-                            <tr><td colspan="9" class="empty-state">No transaction history yet</td></tr>
+                            <tr>
+                                <td colspan="9" class="empty-state">No transaction history yet</td>
+                            </tr>
                         <?php else: ?>
                             <?php foreach ($history as $tx): ?>
                                 <tr>
@@ -112,7 +128,8 @@ foreach ($history as $tx) {
                                     <td><?php echo htmlspecialchars($tx['short_code']); ?></td>
                                     <td><?php echo number_format($tx['num_shares']); ?></td>
                                     <td>$<?php echo number_format($tx['cost_per_share'], 2); ?></td>
-                                    <td><strong>$<?php echo number_format($tx['num_shares'] * $tx['cost_per_share'], 2); ?></strong></td>
+                                    <td><strong>$<?php echo number_format($tx['num_shares'] * $tx['cost_per_share'], 2); ?></strong>
+                                    </td>
                                     <td>#<?php echo $tx['account_id']; ?></td>
                                 </tr>
                             <?php endforeach; ?>
@@ -123,4 +140,5 @@ foreach ($history as $tx) {
         </div>
     </div>
 </body>
+
 </html>
