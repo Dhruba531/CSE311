@@ -1,143 +1,303 @@
 <?php
 session_start();
 require 'config.php';
+require_login();
 
-if (!isset($_SESSION['user_id'])) {
-    header('Location: login.php');
-    exit;
+$uid = $_SESSION['user_id'];
+$msg = '';
+
+// Handle deposit
+if ($_SERVER['REQUEST_METHOD'] == 'POST' && $_POST['action'] == 'deposit') {
+    $amt = (float)$_POST['amount'];
+    $trx = $_POST['trx_id'];
+    
+    $stmt = $pdo->prepare("UPDATE Account SET balance = balance + ? WHERE user_id = ?");
+    $stmt->execute([$amt, $uid]);
+    
+    $stmt = $pdo->prepare("INSERT INTO FundTransaction(user_id, amount, transaction_reference_id) VALUES(?, ?, ?)");
+    $stmt->execute([$uid, $amt, $trx]);
+    
+    $msg = 'Deposit successful!';
 }
 
-$user_id = $_SESSION['user_id'];
+// Get user details
+$stmt = $pdo->prepare("SELECT full_name, workplace FROM Users WHERE user_id = ?");
+$stmt->execute([$uid]);
+$u = $stmt->fetch();
 
+// Get account balance
+$stmt = $pdo->prepare("SELECT balance FROM Account WHERE user_id = ?");
+$stmt->execute([$uid]);
+$bal = $stmt->fetchColumn();
+
+// Get share statistics
 $stmt = $pdo->prepare("
-    SELECT s.ticker_symbol, s.company_name, 
-           SUM(CASE WHEN t.is_buy THEN t.num_shares ELSE -t.num_shares END) as shares_held,
-           AVG(CASE WHEN t.is_buy THEN t.cost_per_share END) as avg_buy_price
+    SELECT SUM(IF(is_buy, num_shares, 0)) bought,
+           SUM(IF(NOT is_buy, num_shares, 0)) sold
+    FROM TransactionRecord 
+    WHERE user_id = ?
+");
+$stmt->execute([$uid]);
+$st = $stmt->fetch();
+
+// Get current holdings
+$stmt = $pdo->prepare("
+    SELECT s.ticker_symbol, s.company_name,
+           SUM(IF(t.is_buy, t.num_shares, -t.num_shares)) shares,
+           sp.current_price
     FROM TransactionRecord t
     JOIN Stock s ON t.ticker_symbol = s.ticker_symbol
+    LEFT JOIN StockPrice sp ON s.ticker_symbol = sp.ticker_symbol
     WHERE t.user_id = ?
     GROUP BY s.ticker_symbol
-    HAVING shares_held > 0
-    ORDER BY shares_held DESC
+    HAVING shares > 0
 ");
-$stmt->execute([$user_id]);
-$portfolio = $stmt->fetchAll();
+$stmt->execute([$uid]);
+$h = $stmt->fetchAll();
 
-// Calculate total portfolio value (simulated current prices)
-$total_value = 0;
-foreach ($portfolio as &$holding) {
-    // Simulate current price (in real app, fetch from API)
-    $current_price = ($holding['avg_buy_price'] ?? 100) * (0.8 + (rand(0, 40) / 100)); // Random price variation
-    $holding['current_price'] = round($current_price, 2);
-    $holding['total_value'] = round($holding['shares_held'] * $current_price, 2);
-    $holding['gain_loss'] = round($holding['total_value'] - ($holding['shares_held'] * ($holding['avg_buy_price'] ?? 0)), 2);
-    $holding['gain_loss_pct'] = $holding['avg_buy_price'] > 0
-        ? round((($current_price - $holding['avg_buy_price']) / $holding['avg_buy_price']) * 100, 2)
-        : 0;
-    $total_value += $holding['total_value'];
+// Get deposit history
+$stmt = $pdo->prepare("
+    SELECT * FROM FundTransaction 
+    WHERE user_id = ? 
+    ORDER BY created_at DESC
+");
+$stmt->execute([$uid]);
+$d = $stmt->fetchAll();
+
+// Get stock transaction history
+$stmt = $pdo->prepare("
+    SELECT t.*, s.company_name 
+    FROM TransactionRecord t
+    JOIN Stock s ON t.ticker_symbol = s.ticker_symbol
+    WHERE t.user_id = ? 
+    ORDER BY t.transaction_date DESC
+");
+$stmt->execute([$uid]);
+$ht = $stmt->fetchAll();
+
+// Calculate total portfolio value
+$tv = 0;
+foreach ($h as $x) {
+    $tv += $x['shares'] * $x['current_price'];
 }
+
+$page_title = 'My Portfolio';
+require 'includes/header.php';
+require 'includes/nav.php';
 ?>
-<!DOCTYPE html>
-<html lang="en">
 
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Portfolio - Stock Trading</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-
-<body class="dashboard-page">
-    <nav class="navbar">
-        <div class="nav-container">
-            <h1 class="logo">
-                <span class="logo-icon">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                        <path d="M3 18L7 12L11 15L15 8L19 11L21 9" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                        <circle cx="7" cy="12" r="1.5" fill="currentColor"/>
-                        <circle cx="11" cy="15" r="1.5" fill="currentColor"/>
-                        <circle cx="15" cy="8" r="1.5" fill="currentColor"/>
-                        <circle cx="19" cy="11" r="1.5" fill="currentColor"/>
-                    </svg>
-                </span>
-                <span class="logo-text">StockTrader</span>
-            </h1>
-            <ul class="nav-menu">
-                <li><a href="index.php">Dashboard</a></li>
-                <li><a href="stocks.php">Stocks</a></li>
-                <li><a href="buy_sell.php">Trade</a></li>
-                <li><a href="orders.php">Orders</a></li>
-                <li><a href="portfolio.php" class="active">Portfolio</a></li>
-                <li><a href="history.php">History</a></li>
-                <li><a href="watchlist.php">Watchlist</a></li>
-                <li><a href="alerts.php">Alerts</a></li>
-                <li><a href="analytics.php">Analytics</a></li>
-                <li><a href="account.php">Account</a></li>
-                <li><a href="friends.php">Friends</a></li>
-                <li><a href="logout.php">Logout</a></li>
-            </ul>
-        </div>
-    </nav>
-
-    <div class="container">
+<div class="container">
+    <!-- Page Header -->
+    <div class="page-header">
         <h2>My Portfolio</h2>
+    </div>
 
-        <div class="portfolio-summary">
-            <div class="summary-card">
-                <h3>Total Portfolio Value</h3>
-                <p class="summary-value">$<?php echo number_format($total_value, 2); ?></p>
-            </div>
-            <div class="summary-card">
-                <h3>Total Holdings</h3>
-                <p class="summary-value"><?php echo count($portfolio); ?></p>
+    <?php if ($msg): ?>
+        <div class='alert alert-success'><?= $msg ?></div>
+    <?php endif; ?>
+
+    <!-- Profile Card -->
+    <div class="card fade-in-up" style="display: flex; align-items: center; gap: 2rem; margin-bottom: 2rem">
+        <div style="width: 80px; height: 80px; background: #eff6ff; border-radius: 50%; 
+                    display: flex; align-items: center; justify-content: center; 
+                    font-size: 2rem; color: var(--primary); font-weight: bold">
+            <?= strtoupper(substr($u['full_name'], 0, 1)) ?>
+        </div>
+        <div style="flex: 1">
+            <h2 style="margin-bottom: .25rem"><?= htmlspecialchars($u['full_name']) ?></h2>
+            <p style="color: var(--text-muted); margin-bottom: 1rem">
+                <span style="display: inline-flex; align-items: center; gap: .5rem">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/>
+                        <path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+                    </svg>
+                    <?= htmlspecialchars($u['workplace'] ?? 'Unknown') ?>
+                </span>
+            </p>
+            <div style="display: flex; gap: 2rem">
+                <div>
+                    <div style="font-size: .875rem; color: var(--text-muted)">Total Shares Bought</div>
+                    <div style="font-weight: 600; font-size: 1.1rem; color: var(--success)">
+                        +<?= number_format($st['bought'] ?? 0) ?>
+                    </div>
+                </div>
+                <div>
+                    <div style="font-size: .875rem; color: var(--text-muted)">Total Shares Sold</div>
+                    <div style="font-weight: 600; font-size: 1.1rem; color: var(--danger)">
+                        -<?= number_format($st['sold'] ?? 0) ?>
+                    </div>
+                </div>
             </div>
         </div>
-
-        <div class="card">
-            <h3>Holdings</h3>
-            <div class="table-container">
-                <table>
-                    <thead>
-                        <tr>
-                            <th>Symbol</th>
-                            <th>Company</th>
-                            <th>Shares</th>
-                            <th>Avg Buy Price</th>
-                            <th>Current Price</th>
-                            <th>Total Value</th>
-                            <th>Gain/Loss</th>
-                            <th>% Change</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php if (empty($portfolio)): ?>
-                            <tr>
-                                <td colspan="8" class="empty-state">No holdings yet. Start trading to build your portfolio!
-                                </td>
-                            </tr>
-                        <?php else: ?>
-                            <?php foreach ($portfolio as $holding): ?>
-                                <tr>
-                                    <td><strong><?php echo htmlspecialchars($holding['ticker_symbol']); ?></strong></td>
-                                    <td><?php echo htmlspecialchars($holding['company_name']); ?></td>
-                                    <td><?php echo number_format($holding['shares_held']); ?></td>
-                                    <td>$<?php echo number_format($holding['avg_buy_price'] ?? 0, 2); ?></td>
-                                    <td>$<?php echo number_format($holding['current_price'], 2); ?></td>
-                                    <td>$<?php echo number_format($holding['total_value'], 2); ?></td>
-                                    <td class="<?php echo $holding['gain_loss'] >= 0 ? 'text-success' : 'text-danger'; ?>">
-                                        $<?php echo number_format($holding['gain_loss'], 2); ?>
-                                    </td>
-                                    <td class="<?php echo $holding['gain_loss_pct'] >= 0 ? 'text-success' : 'text-danger'; ?>">
-                                        <?php echo $holding['gain_loss_pct'] >= 0 ? '+' : ''; ?>        <?php echo number_format($holding['gain_loss_pct'], 2); ?>%
-                                    </td>
-                                </tr>
-                            <?php endforeach; ?>
-                        <?php endif; ?>
-                    </tbody>
-                </table>
+        <div style="text-align: right">
+            <div style="font-size: .875rem; color: var(--text-muted); margin-bottom: .25rem">Current Balance</div>
+            <div style="font-size: 2rem; font-weight: 700; color: var(--primary)">
+                $<?= number_format($bal, 2) ?>
             </div>
         </div>
     </div>
-</body>
 
-</html>
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-icon">💰</div>
+            <div class="stat-info">
+                <h3>Available Balance</h3>
+                <p class="stat-value">$<?= number_format($bal, 2) ?></p>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon">💼</div>
+            <div class="stat-info">
+                <h3>Total Holdings Value</h3>
+                <p class="stat-value">$<?= number_format($tv, 2) ?></p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Grid -->
+    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 2rem">
+        <!-- Left Column -->
+        <div>
+            <!-- Current Holdings -->
+            <div class="card">
+                <h3>Current Holdings</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Symbol</th>
+                                <th>Company</th>
+                                <th>Shares</th>
+                                <th>Current Price</th>
+                                <th>Total Value</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($h)): ?>
+                                <tr>
+                                    <td colspan="5" class="empty-state">No stocks owned yet.</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($h as $x): ?>
+                                    <tr>
+                                        <td><strong><?= $x['ticker_symbol'] ?></strong></td>
+                                        <td><?= $x['company_name'] ?></td>
+                                        <td><?= $x['shares'] ?></td>
+                                        <td>$<?= number_format($x['current_price'], 2) ?></td>
+                                        <td>$<?= number_format($x['shares'] * $x['current_price'], 2) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Deposit History -->
+            <div class="card">
+                <h3>Deposit History</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Transaction ID</th>
+                                <th>Amount</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($d)): ?>
+                                <tr>
+                                    <td colspan="3" class="empty-state">No deposits yet.</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($d as $x): ?>
+                                    <tr>
+                                        <td><?= date('M d, Y', strtotime($x['created_at'])) ?></td>
+                                        <td><code><?= $x['transaction_reference_id'] ?></code></td>
+                                        <td style="color: var(--success)">+$<?= number_format($x['amount'], 2) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Stock Transaction History -->
+            <div class="card" style="margin-top: 2rem">
+                <h3>Stock Transaction History</h3>
+                <div class="table-container">
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Type</th>
+                                <th>Symbol</th>
+                                <th>Shares</th>
+                                <th>Price</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php if (empty($ht)): ?>
+                                <tr>
+                                    <td colspan="6" class="empty-state">No trades yet.</td>
+                                </tr>
+                            <?php else: ?>
+                                <?php foreach ($ht as $t): ?>
+                                    <?php
+                                    $ib = $t['is_buy'];
+                                    $tot = $t['num_shares'] * $t['cost_per_share'];
+                                    ?>
+                                    <tr>
+                                        <td><?= date('M d, H:i', strtotime($t['transaction_date'])) ?></td>
+                                        <td>
+                                            <span class="badge <?= $ib ? 'badge-blue' : 'badge-gray' ?>" 
+                                                  style="color: <?= $ib ? 'var(--success)' : 'var(--danger)' ?>">
+                                                <?= $ib ? 'BUY' : 'SELL' ?>
+                                            </span>
+                                        </td>
+                                        <td><strong><?= $t['ticker_symbol'] ?></strong></td>
+                                        <td><?= $t['num_shares'] ?></td>
+                                        <td>$<?= number_format($t['cost_per_share'], 2) ?></td>
+                                        <td style="font-weight: 600">$<?= number_format($tot, 2) ?></td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Right Column: Deposit Form -->
+        <div>
+            <div class="card">
+                <h3>Deposit Funds</h3>
+                <form method="POST">
+                    <input type="hidden" name="action" value="deposit">
+                    
+                    <div class="form-group">
+                        <label for="amount">Amount ($)</label>
+                        <input type="number" id="amount" name="amount" step="0.01" min="1" 
+                               required placeholder="0.00">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="trx_id">Transaction ID</label>
+                        <input type="text" id="trx_id" name="trx_id" required placeholder="e.g., TRX-12345">
+                        <small style="color: var(--text-muted); display: block; margin-top: .25rem">
+                            Enter the reference ID from your bank transfer.
+                        </small>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%">Deposit Funds</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php require 'includes/footer.php'; ?>

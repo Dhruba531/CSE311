@@ -4,7 +4,7 @@ services:
   app:
     build: .
     ports:
-      - "8000:80"
+      - "8000:8080"
     volumes:
       - .:/var/www/html
     environment:
@@ -13,7 +13,8 @@ services:
       - DB_USER=root
       - DB_PASS=Dhruba2232537
       - DB_CHARSET=utf8mb4
-      - APP_ENV=production
+      - DB_CONNECTION=mysql
+      - APP_ENV=development
     depends_on:
       - db
     networks:
@@ -28,9 +29,21 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       # Auto-init database with our scripts
-      - ./database_enhanced.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./final_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
       - ./add_dummy_data.sql:/docker-entrypoint-initdb.d/02_data.sql
-      - ./add_more_triggers.sql:/docker-entrypoint-initdb.d/03_triggers.sql
+    networks:
+      - stock-network
+
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin
+    ports:
+      - "8080:80"
+    environment:
+      - PMA_HOST=db
+      - PMA_USER=root
+      - PMA_PASSWORD=Dhruba2232537
+    depends_on:
+      - db
     networks:
       - stock-network
 

@@ -1,26 +1,3 @@
-<?php
-session_start();
-require 'config.php';
-
-// Auth Check
-if (!isset($_SESSION['user_id'])) {
-    header("Location: login.php");
-    exit;
-}
-
-$uid = $_SESSION['user_id'];
-$username = $_SESSION['full_name'];
-
-// Fetch Balance
-$stmt = $pdo->prepare("SELECT balance FROM Account WHERE user_id = ?");
-$stmt->execute([$uid]);
-$balance = $stmt->fetchColumn();
-if ($balance === false) {
-    // Initialize account if new user
-    $pdo->prepare("INSERT INTO Account (user_id, balance) VALUES (?, 10000.00)")->execute([$uid]);
-    $balance = 10000.00;
-}
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,7 +7,7 @@ if ($balance === false) {
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/glass.css">
     <!-- Font Awesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
 </head>
@@ -44,6 +21,9 @@ if ($balance === false) {
             <div class="ticker__item">BTC <span class="up">▲ 3.4%</span></div>
             <div class="ticker__item">ETH <span class="down">▼ 1.1%</span></div>
             <div class="ticker__item">GOOGL <span class="up">▲ 0.8%</span></div>
+            <div class="ticker__item">AMZN <span class="down">▼ 0.2%</span></div>
+             <div class="ticker__item">AAPL <span class="up">▲ 1.2%</span></div> <!-- Repeat for seamless loop -->
+             <div class="ticker__item">TSLA <span class="down">▼ 0.5%</span></div>
         </div>
     </div>
 
@@ -55,14 +35,15 @@ if ($balance === false) {
             </div>
             <ul class="nav-links">
                 <li class="active"><a href="#"><i class="fas fa-th-large"></i> <span>Dashboard</span></a></li>
-                <li><a href="portfolio.php"><i class="fas fa-wallet"></i> <span>Portfolio</span></a></li>
+                <li><a href="#"><i class="fas fa-wallet"></i> <span>Portfolio</span></a></li>
                 <li><a href="#"><i class="fas fa-chart-line"></i> <span>Market</span></a></li>
-                <li><a href="logout.php"><i class="fas fa-sign-out-alt"></i> <span>Logout</span></a></li>
+                <li><a href="#"><i class="fas fa-exchange-alt"></i> <span>Transactions</span></a></li>
+                <li><a href="#"><i class="fas fa-cog"></i> <span>Settings</span></a></li>
             </ul>
             <div class="user-profile">
-                <div class="avatar"><?php echo substr($username, 0, 2); ?></div>
+                <div class="avatar">JM</div>
                 <div class="info">
-                    <p><?php echo htmlspecialchars($username); ?></p>
+                    <p>John Doe</p>
                     <small>Pro Trader</small>
                 </div>
             </div>
@@ -74,23 +55,17 @@ if ($balance === false) {
             <header class="top-bar glass">
                 <div class="welcome">
                     <h1>Dashboard</h1>
-                    <p>Welcome back, <?php echo htmlspecialchars($username); ?></p>
+                    <p>Welcome back, John</p>
                 </div>
                 <div class="balance-card">
                     <span class="label">Total Balance</span>
-                    <h2 class="balance">$<?php echo number_format($balance, 2); ?> <span class="badge up">+0.0%</span></h2>
+                    <h2 class="balance">$24,593.00 <span class="badge up">+2.4%</span></h2>
                 </div>
                 <div class="actions">
                     <button class="icon-btn"><i class="fas fa-bell"></i></button>
                     <button class="icon-btn"><i class="fas fa-search"></i></button>
                 </div>
             </header>
-
-            <?php if (isset($_SESSION['message'])): ?>
-            <div class="glass panel" style="margin-bottom: 20px; color: <?php echo ($_SESSION['msg_type']=='error')?'#ff4d4d':'#00ff88'; ?>">
-                <?php echo $_SESSION['message']; unset($_SESSION['message']); ?>
-            </div>
-            <?php endif; ?>
 
             <!-- Dashboard Grid -->
             <div class="dashboard-grid">
@@ -115,23 +90,43 @@ if ($balance === false) {
                                 <td>
                                     <div class="stock-info">
                                         <div class="icon apple"><i class="fab fa-apple"></i></div>
-                                        <div><strong>AAPL</strong><small>Apple Inc.</small></div>
+                                        <div>
+                                            <strong>AAPL</strong>
+                                            <small>Apple Inc.</small>
+                                        </div>
                                     </div>
                                 </td>
                                 <td>$150.00</td>
                                 <td class="up">+1.2%</td>
-                                <td><button class="btn-trade" onclick="setTicker('AAPL')">Trade</button></td>
+                                <td><button class="btn-trade">Trade</button></td>
                             </tr>
                             <tr>
                                 <td>
                                     <div class="stock-info">
                                         <div class="icon tesla">T</div>
-                                        <div><strong>TSLA</strong><small>Tesla Inc.</small></div>
+                                        <div>
+                                            <strong>TSLA</strong>
+                                            <small>Tesla Inc.</small>
+                                        </div>
                                     </div>
                                 </td>
                                 <td>$900.00</td>
                                 <td class="down">-0.5%</td>
-                                <td><button class="btn-trade" onclick="setTicker('TSLA')">Trade</button></td>
+                                <td><button class="btn-trade">Trade</button></td>
+                            </tr>
+                            <tr>
+                                <td>
+                                    <div class="stock-info">
+                                        <div class="icon google"><i class="fab fa-google"></i></div>
+                                        <div>
+                                            <strong>GOOGL</strong>
+                                            <small>Alphabet Inc.</small>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>$2,800.00</td>
+                                <td class="up">+0.8%</td>
+                                <td><button class="btn-trade">Trade</button></td>
                             </tr>
                         </tbody>
                     </table>
@@ -144,36 +139,44 @@ if ($balance === false) {
                         <button class="toggle-btn active" id="buyBtn">Buy</button>
                         <button class="toggle-btn" id="sellBtn">Sell</button>
                     </div>
-                    
-                    <form class="trade-form" action="trade.php" method="POST" id="tradeForm">
-                        <input type="hidden" name="action" id="actionInput" value="buy">
-                        
+                    <form class="trade-form">
                         <div class="input-group">
                             <label>Stock Ticker</label>
-                            <input type="text" name="ticker" id="tickerInput" value="AAPL">
+                            <input type="text" value="AAPL" readonly>
                         </div>
                         <div class="input-group">
                             <label>Quantity</label>
-                            <input type="number" name="quantity" value="1" min="1">
+                            <input type="number" value="1" min="1">
                         </div>
                         <div class="input-group">
                             <label>Est. Cost</label>
-                            <div class="price-display">Market Price</div>
+                            <div class="price-display">$150.00</div>
                         </div>
                         <button type="button" class="btn-execute" onclick="show2FA()">Execute Trade</button>
-                        
-                        <!-- Real Submit Button (Hidden, triggered by Modal) -->
-                        <button type="submit" id="realSubmit" style="display:none;"></button>
                     </form>
                 </section>
 
                 <!-- Portfolio Summary (Mini) -->
                 <section class="portfolio-summary glass panel">
                     <h3>Your Portfolio</h3>
+                    <div class="chart-placeholder">
+                        <!-- CSS Shapes to mimic chart -->
+                        <div class="bar" style="height: 40%"></div>
+                        <div class="bar" style="height: 60%"></div>
+                        <div class="bar" style="height: 35%"></div>
+                        <div class="bar" style="height: 75%"></div>
+                        <div class="bar" style="height: 50%"></div>
+                        <div class="bar active" style="height: 80%"></div>
+                        <div class="bar" style="height: 65%"></div>
+                    </div>
                     <div class="stats">
                         <div class="stat">
-                            <span>Cash Available</span>
-                            <strong class="up">$<?php echo number_format($balance, 2); ?></strong>
+                            <span>Invested</span>
+                            <strong>$18,000</strong>
+                        </div>
+                        <div class="stat">
+                            <span>Profit</span>
+                            <strong class="up">+$6,593</strong>
                         </div>
                     </div>
                 </section>
@@ -188,11 +191,11 @@ if ($balance === false) {
             <div class="modal-icon">
                 <i class="fas fa-shield-alt"></i>
             </div>
-            <h2>Verify Transaction</h2>
-            <p>Enter 2FA Code to confirm (or click Verify for Demo)</p>
+            <h2>Two-Step Verification</h2>
+            <p>Enter the 6-digit code from your authenticator app.</p>
             
             <div class="otp-inputs">
-                <input type="text" maxlength="1">
+                <input type="text" maxlength="1" autofocus>
                 <input type="text" maxlength="1">
                 <input type="text" maxlength="1">
                 <input type="text" maxlength="1">
@@ -200,50 +203,56 @@ if ($balance === false) {
                 <input type="text" maxlength="1">
             </div>
 
-            <button class="btn-verify" onclick="submitTrade()">Confirm & Execute</button>
+            <button class="btn-verify">Verify Identity</button>
+            <p class="resend">Didn't receive code? <a href="#">Resend</a></p>
         </div>
     </div>
 
     <script>
+        // Simple Interaction Scripts
         const buyBtn = document.getElementById('buyBtn');
         const sellBtn = document.getElementById('sellBtn');
-        const actionInput = document.getElementById('actionInput');
-        
-        buyBtn.addEventListener('click', (e) => {
-            e.preventDefault();
+        const executeBtn = document.querySelector('.btn-execute'); // Refers to the first one found or specifically attached
+
+        buyBtn.addEventListener('click', () => {
             buyBtn.classList.add('active');
             sellBtn.classList.remove('active');
-            actionInput.value = 'buy';
             document.querySelector('.btn-execute').style.background = 'linear-gradient(45deg, #00ff88, #00cc6a)';
             document.querySelector('.btn-execute').innerText = 'Execute Buy';
         });
 
-        sellBtn.addEventListener('click', (e) => {
-            e.preventDefault();
+        sellBtn.addEventListener('click', () => {
             sellBtn.classList.add('active');
             buyBtn.classList.remove('active');
-            actionInput.value = 'sell';
             document.querySelector('.btn-execute').style.background = 'linear-gradient(45deg, #ff4d4d, #cc0000)';
             document.querySelector('.btn-execute').innerText = 'Execute Sell';
         });
 
-        function setTicker(ticker) {
-            document.getElementById('tickerInput').value = ticker;
-        }
-
         function show2FA() {
             document.getElementById('modal-2fa').style.display = 'flex';
+            // Auto focus first input
+            document.querySelector('.otp-inputs input').focus();
         }
 
         function hide2FA() {
             document.getElementById('modal-2fa').style.display = 'none';
         }
-        
-        function submitTrade() {
-            // In a real app, verify OTP via AJAX first. 
-            // Here we simulate success and submit form.
-            document.getElementById('tradeForm').submit();
-        }
+
+        // Auto tab for OTP
+        const otpInputs = document.querySelectorAll('.otp-inputs input');
+        otpInputs.forEach((input, index) => {
+            input.addEventListener('keyup', (e) => {
+                if (e.key >= 0 && e.key <= 9) {
+                    if (index < otpInputs.length - 1) {
+                        otpInputs[index + 1].focus();
+                    }
+                } else if (e.key === 'Backspace') {
+                    if (index > 0) {
+                        otpInputs[index - 1].focus();
+                    }
+                }
+            });
+        });
     </script>
 </body>
 </html>

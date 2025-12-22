@@ -126,6 +126,66 @@ function getPriceChangeColor($change)
 }
 
 /**
+ * Get stock price
+ */
+function getStockPrice($pdo, $ticker_symbol)
+{
+    $stmt = $pdo->prepare("SELECT current_price FROM StockPrice WHERE ticker_symbol = ?");
+    $stmt->execute([$ticker_symbol]);
+    $result = $stmt->fetch();
+    return $result ? $result['current_price'] : null;
+}
+
+/**
+ * Execute a trade
+ */
+function executeTrade($pdo, $user_id, $account_id, $ticker_symbol, $shares, $is_buy, $price)
+{
+    $total_cost = $price * $shares;
+
+    if ($is_buy) {
+        // Check account balance
+        $stmt = $pdo->prepare("SELECT balance FROM Account WHERE account_id = ? AND user_id = ?");
+        $stmt->execute([$account_id, $user_id]);
+        $account = $stmt->fetch();
+
+        if (!$account || $account['balance'] < $total_cost) {
+            throw new Exception('Insufficient funds');
+        }
+
+        // Deduct from account
+        $stmt = $pdo->prepare("UPDATE Account SET balance = balance - ? WHERE account_id = ?");
+        $stmt->execute([$total_cost, $account_id]);
+    } else {
+        // Check if user owns enough shares
+        $stmt = $pdo->prepare("
+            SELECT SUM(CASE WHEN is_buy THEN num_shares ELSE -num_shares END) as total_shares
+            FROM TransactionRecord
+            WHERE user_id = ? AND ticker_symbol = ?
+        ");
+        $stmt->execute([$user_id, $ticker_symbol]);
+        $holding = $stmt->fetch();
+
+        if (!$holding || $holding['total_shares'] < $shares) {
+            throw new Exception('Insufficient shares');
+        }
+
+        // Add to account
+        $stmt = $pdo->prepare("UPDATE Account SET balance = balance + ? WHERE account_id = ?");
+        $stmt->execute([$total_cost, $account_id]);
+    }
+
+    // Add transaction record
+    $stmt = $pdo->prepare("
+        INSERT INTO TransactionRecord (user_id, account_id, ticker_symbol, is_buy, cost_per_share, num_shares, exchange_id) 
+        VALUES (?, ?, ?, ?, ?, ?, 1)
+    ");
+    $stmt->execute([$user_id, $account_id, $ticker_symbol, $is_buy ? 1 : 0, $price, $shares]);
+
+    return true;
+}
+
+/**
  * Get price change arrow
  */
 function getPriceChangeArrow($change)
