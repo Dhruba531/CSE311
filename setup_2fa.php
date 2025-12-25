@@ -1,38 +1,68 @@
 <?php
 session_start();
 require 'config.php';
+require_login();
 
-if (!isset($_SESSION['2fa_new_secret'])) {
-    header("Location: index.php");
+$msg = '';
+$uid = $_SESSION['user_id'];
+
+// Handle Toggle
+if ($_SERVER['REQUEST_METHOD'] == 'POST') {
+    $action = $_POST['action'];
+    $newState = ($action === 'enable') ? 1 : 0;
+    
+    $stmt = $pdo->prepare("UPDATE Users SET is_2fa_enabled = ? WHERE user_id = ?");
+    $stmt->execute([$newState, $uid]);
+    
+    $_SESSION['message'] = "2FA has been " . ($newState ? "enabled" : "disabled") . ".";
+    header("Location: setup_2fa.php");
     exit;
 }
 
-$secret = $_SESSION['2fa_new_secret'];
-$qr = $_SESSION['2fa_qr'];
-?>
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Setup 2FA - StockTrader</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="css/style.css">
-</head>
-<body style="display:flex;align-items:center;justify-content:center;min-height:100vh;background:#f1f5f9;">
+// Get Current Status
+$stmt = $pdo->prepare("SELECT is_2fa_enabled FROM Users WHERE user_id = ?");
+$stmt->execute([$uid]);
+$status = $stmt->fetchColumn();
+$isEnabled = (bool)$status;
 
-    <div class="card auth-card fade-in-up" style="text-align:center; max-width: 500px;">
-        <h2>Secure Your Account</h2>
-        <p class="subtitle">Scan this QR code with Google Authenticator</p>
-        
-        <div style="margin: 2rem 0;">
-            <img src="<?php echo $qr; ?>" alt="2FA QR Code" style="border:1px solid #ddd; padding:0.5rem; border-radius:0.5rem; background:white;">
-            <p style="margin-top:1rem; font-family:monospace; font-size:1.2rem; background:#eee; padding:0.5rem; border-radius:0.25rem;">
-                <?php echo $secret; ?>
+$page_title = 'Security Settings';
+require 'includes/header.php';
+require 'includes/nav.php';
+?>
+
+<div class="flex-between mb-4">
+    <h1>Security Settings</h1>
+</div>
+
+<?php if (isset($_SESSION['message'])): ?>
+    <div style="background:#dcfce7; color:#166534; padding:15px; border-radius:1rem; margin-bottom:20px; font-weight:600;">
+        <?= $_SESSION['message']; unset($_SESSION['message']); ?>
+    </div>
+<?php endif; ?>
+
+<div class="card-premium" style="max-width: 600px;">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem;">
+        <div>
+            <h3 style="margin-bottom:0.5rem; font-size:1.2rem;">Email 2-Step Verification</h3>
+            <p style="color:var(--text-secondary); font-size:0.9rem;">
+                Receive a 6-digit code via email every time you log in.
             </p>
         </div>
         
-        <a href="index.php" class="btn btn-primary" style="width:100%">I Have Scanned It</a>
+        <form method="POST">
+            <?php if ($isEnabled): ?>
+                <input type="hidden" name="action" value="disable">
+                <button class="btn-primary" style="background:var(--danger);">Disable 2FA</button>
+            <?php else: ?>
+                <input type="hidden" name="action" value="enable">
+                <button class="btn-primary" style="background:#000;">Enable 2FA</button>
+            <?php endif; ?>
+        </form>
     </div>
+    
+    <div style="background: #f4f4f5; padding: 1rem; border-radius: 0.75rem; font-size: 0.85rem; color: var(--text-secondary);">
+        <strong>status:</strong> <?= $isEnabled ? '<span style="color:green; font-weight:bold;">ACTIVE</span>' : 'Inactive' ?>
+    </div>
+</div>
 
-</body>
-</html>
+<?php require 'includes/footer.php'; ?>

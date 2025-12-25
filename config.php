@@ -4,7 +4,7 @@ require_once __DIR__ . '/vendor/autoload.php';
 $dotenv = Dotenv\Dotenv::createImmutable(__DIR__);
 $dotenv->load();
 
-$db_connection = $_ENV['DB_CONNECTION'] ?? 'mysql';
+$db_connection = $_ENV['DB_CONNECTION'] ?? 'sqlite';
 
 $options = [
     PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION,
@@ -37,6 +37,15 @@ try {
 function is_logged_in() {
     return isset($_SESSION['user_id']);
 }
+
+
+// SMTP Configuration (For Real Email)
+define('SMTP_HOST', 'smtp.gmail.com');
+define('SMTP_PORT', 587);
+define('SMTP_USER', 'your_email@gmail.com');     // REPLACE with your email
+define('SMTP_PASS', 'your_app_password');        // REPLACE with your App Password
+define('SMTP_FROM', 'noreply@xtrade.com');
+define('SMTP_FROM_NAME', 'XTrade Security');
 
 function require_login() {
     if (!is_logged_in()) {

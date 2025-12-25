@@ -544,3 +544,181 @@ tr:hover td {
         padding: 20px;
     }
 }
+
+/* =========================================
+   New Sidebar Styles (XTrade Pro)
+   ========================================= */
+.app-wrapper {
+    display: flex;
+    min-height: 100vh;
+    background: #000;
+    /* Sidebar bg */
+}
+
+/* Override existing sidebar for new structure */
+.sidebar {
+    width: 260px;
+    background: #000;
+    color: #fff;
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    position: sticky;
+    top: 0;
+    border-right: 1px solid #1f1f22;
+    padding: 0;
+    margin: 0;
+}
+
+.sidebar-header {
+    padding: 24px;
+    margin-bottom: 10px;
+}
+
+.logo-text {
+    font-size: 1.5rem;
+    font-weight: 800;
+    letter-spacing: -0.05em;
+    color: #fff;
+}
+
+.user-profile-compact {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 0 24px 20px 24px;
+    border-bottom: 1px solid #1f1f22;
+    margin-bottom: 10px;
+}
+
+.avatar-circle {
+    width: 36px;
+    height: 36px;
+    background: linear-gradient(135deg, #2563eb, #7c3aed);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.9rem;
+    color: white;
+    border: 2px solid rgba(255, 255, 255, 0.1);
+}
+
+.user-info .name {
+    font-size: 0.85rem;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.2;
+}
+
+.user-info .plan-badge {
+    font-size: 0.65rem;
+    color: #fbbf24;
+    /* Amber-400 */
+    font-weight: 600;
+    letter-spacing: 0.05em;
+}
+
+.nav-menu {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 16px;
+    list-style: none;
+    /* Custom Scrollbar */
+    scrollbar-width: thin;
+    scrollbar-color: #333 #000;
+}
+
+.nav-menu::-webkit-scrollbar {
+    width: 6px;
+}
+
+.nav-menu::-webkit-scrollbar-thumb {
+    background-color: #333;
+    border-radius: 3px;
+}
+
+.nav-header {
+    font-size: 0.75rem;
+    text-transform: uppercase;
+    color: #a1a1aa;
+    /* Zinc-400 for better visibility */
+    font-weight: 800;
+    margin: 24px 0 8px 12px;
+    letter-spacing: 0.05em;
+    opacity: 0.9;
+}
+
+.nav-item {
+    margin-bottom: 2px;
+}
+
+.nav-item a {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 8px;
+    color: #d4d4d8;
+    /* Zinc-300 */
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 500;
+    transition: all 0.2s;
+}
+
+.nav-item a:hover {
+    background: #27272a;
+    /* Zinc-800 */
+    color: #fff;
+}
+
+.nav-item a.active {
+    background: #fff;
+    color: #000;
+    font-weight: 700;
+}
+
+.nav-item i {
+    width: 20px;
+    text-align: center;
+}
+
+.nav-footer {
+    padding: 16px;
+    border-top: 1px solid #27272a;
+    background: #000;
+}
+
+.nav-footer a {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    width: 100%;
+    padding: 12px;
+    background: #27272a;
+    color: #ef4444;
+    /* Red Text */
+    border-radius: 8px;
+    font-weight: 700;
+    text-decoration: none;
+    transition: all 0.2s;
+}
+
+.nav-footer a:hover {
+    background: #ef4444;
+    color: #fff;
+}
+
+/* Main Content Area Adjustment */
+.main-content {
+    flex: 1;
+    background: #fdfdfd;
+    /* Light bg for content */
+    color: #18181b;
+    padding: 32px;
+    height: 100vh;
+    overflow-y: auto;
+}

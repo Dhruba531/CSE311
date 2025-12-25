@@ -1,5 +1,5 @@
 <?php
-// This script would normally run as a Cron Job or Daemon
+// This script runs as a background job to execute Limit Orders
 require 'config.php';
 
 echo "Running Order Processor...\n";
@@ -7,75 +7,110 @@ echo "Running Order Processor...\n";
 try {
     $pdo->beginTransaction();
 
-    // Fetch pending orders
-    $orders = $pdo->query("SELECT * FROM Orders WHERE status = 'pending'")->fetchAll();
+    // Fetch pending transactions (Limit Orders)
+    // Note: In our system, Limit Orders are stored in Transactions with status='PENDING'
+    $stmt = $pdo->query("SELECT * FROM Transactions WHERE status = 'PENDING' AND order_type = 'LIMIT'");
+    $orders = $stmt->fetchAll();
 
     foreach ($orders as $o) {
-        $oid = $o['order_id'];
+        $tid = $o['transaction_id'];
         $uid = $o['user_id'];
         $aid = $o['account_id'];
         $sym = $o['ticker_symbol'];
-        $type = $o['order_type'];
-        $target = $o['target_price'];
-        $qty = $o['num_shares'];
+        $side = $o['transaction_type']; // BUY or SELL
+        $targetPrice = $o['cost']; // For Limit orders, the 'cost' column stores the Limit Price
+        $qty = $o['quantity'];
         
-        // Get current price
-        $stmt_price = $pdo->prepare("SELECT current_price FROM StockPrice WHERE ticker_symbol = ?");
+        // Get current market price
+        $stmt_price = $pdo->prepare("SELECT current_price FROM Stocks WHERE ticker_symbol = ?");
         $stmt_price->execute([$sym]);
         $curr = $stmt_price->fetchColumn();
         
         if (!$curr) continue;
         
+        echo "Processing #$tid ($side $qty $sym @ $targetPrice) - Current: $curr\n";
+        
         $executed = false;
         
-        if ($type == 'limit_buy') {
-            if ($curr <= $target) {
-                $stmt = $pdo->prepare("INSERT INTO TransactionRecord(user_id, account_id, ticker_symbol, is_buy, cost_per_share, num_shares)
-                             VALUES (?, ?, ?, 1, ?, ?)");
-                $stmt->execute([$uid, $aid, $sym, $curr, $qty]);
+        if ($side == 'BUY') {
+            // BUY LIMIT: Execute if Current Price <= Target
+            if ($curr <= $targetPrice) {
+                // Check Funds (Funds were not deducted on placement, so check now)
+                // Note: Real systems freeze funds on placement. Here we verify balance.
+                $stmt = $pdo->prepare("SELECT balance FROM Accounts WHERE account_id = ?");
+                $stmt->execute([$aid]);
+                $bal = $stmt->fetchColumn();
                 
-                $diff = ($target - $curr) * $qty;
-                if ($diff > 0) {
-                    $stmt = $pdo->prepare("UPDATE Account SET balance = balance + ? WHERE user_id = ?");
-                    $stmt->execute([$diff, $uid]);
-                }
+                $total_cost = $curr * $qty;
                 
-                $executed = true;
-            }
-        } elseif ($type == 'limit_sell') {
-            if ($curr >= $target) {
-                $stmt_owned = $pdo->prepare("SELECT SUM(IF(is_buy, num_shares, -num_shares)) FROM TransactionRecord WHERE user_id = ? AND ticker_symbol = ?");
-                $stmt_owned->execute([$uid, $sym]);
-                $owned = $stmt_owned->fetchColumn();
-                
-                if ($owned >= $qty) {
-                    $total_credit = $curr * $qty;
-                    $stmt = $pdo->prepare("UPDATE Account SET balance = balance + ? WHERE user_id = ?");
-                    $stmt->execute([$total_credit, $uid]);
+                if ($bal >= $total_cost) {
+                    // Deduct Funds
+                    $pdo->prepare("UPDATE Accounts SET balance = balance - ? WHERE account_id = ?")->execute([$total_cost, $aid]);
                     
-                    $stmt = $pdo->prepare("INSERT INTO TransactionRecord(user_id, account_id, ticker_symbol, is_buy, cost_per_share, num_shares)
-                                 VALUES (?, ?, ?, 0, ?, ?)");
-                    $stmt->execute([$uid, $aid, $sym, $curr, $qty]);
+                    // Add Holdings
+                    $stmt = $pdo->prepare("SELECT quantity, avg_price FROM Holdings WHERE user_id = ? AND ticker_symbol = ?");
+                    $stmt->execute([$uid, $sym]);
+                    $holding = $stmt->fetch();
+                    
+                    if ($holding) {
+                        $newQty = $holding['quantity'] + $qty;
+                        $newAvg = (($holding['avg_price'] * $holding['quantity']) + ($total_cost)) / $newQty;
+                        $pdo->prepare("UPDATE Holdings SET quantity = ?, avg_price = ? WHERE user_id = ? AND ticker_symbol = ?")
+                            ->execute([$newQty, $newAvg, $uid, $sym]);
+                    } else {
+                        $pdo->prepare("INSERT INTO Holdings (user_id, ticker_symbol, quantity, avg_price) VALUES (?, ?, ?, ?)")
+                            ->execute([$uid, $sym, $qty, $curr]);
+                    }
+                    
                     $executed = true;
                 } else {
-                    $stmt = $pdo->prepare("UPDATE Orders SET status = 'cancelled' WHERE order_id = ?");
-                    $stmt->execute([$oid]);
-                    echo "Order #$oid cancelled: Insufficient shares.\n";
+                    echo "Insufficient funds for Order #$tid. Skipping.\n";
+                }
+            }
+        } elseif ($side == 'SELL') {
+            // SELL LIMIT: Execute if Current Price >= Target
+            if ($curr >= $targetPrice) {
+                // Check Shares (We allowed placement even if shares change, need to verify ownership now)
+                // Note: Real systems lock shares. 
+                $stmt = $pdo->prepare("SELECT quantity FROM Holdings WHERE user_id = ? AND ticker_symbol = ?");
+                $stmt->execute([$uid, $sym]);
+                $owned = $stmt->fetchColumn() ?: 0;
+                
+                if ($owned >= $qty) {
+                    // Remove Holdings
+                    $pdo->prepare("UPDATE Holdings SET quantity = quantity - ? WHERE user_id = ? AND ticker_symbol = ?")
+                        ->execute([$qty, $uid, $sym]);
+                        
+                    $pdo->prepare("DELETE FROM Holdings WHERE quantity <= 0 AND user_id = ?")->execute([$uid]);
+                    
+                    // Add Funds
+                    $credit = $curr * $qty;
+                    $pdo->prepare("UPDATE Accounts SET balance = balance + ? WHERE account_id = ?")->execute([$credit, $aid]);
+                    
+                    $executed = true;
+                } else {
+                    echo "Insufficient shares for Order #$tid. Cancelling.\n";
+                    $pdo->prepare("UPDATE Transactions SET status = 'CANCELLED' WHERE transaction_id = ?")->execute([$tid]);
                 }
             }
         }
         
         if ($executed) {
-            $stmt = $pdo->prepare("UPDATE Orders SET status = 'filled' WHERE order_id = ?");
-            $stmt->execute([$oid]);
-            echo "Order #$oid executed at $$curr.\n";
+            // Mark Transaction as Completed
+            // Update actual execution cost and status
+            // Note: We update the existing pending row instead of inserting a new one
+            $pdo->prepare("UPDATE Transactions SET status = 'COMPLETED', cost = ? WHERE transaction_id = ?")
+                ->execute([$curr, $tid]); // Update 'cost' to actual execution price
+                
+            echo "Order #$tid EXECUTED at $$curr.\n";
         }
     }
 
     $pdo->commit();
-    echo "Done.\n";
+    echo "Processing Complete.\n";
     
 } catch (Exception $e) {
-    $pdo->rollBack();
+    if ($pdo->inTransaction()) $pdo->rollBack();
     echo "Error: " . $e->getMessage() . "\n";
 }
+?>

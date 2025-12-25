@@ -20,38 +20,35 @@ if ($uid != 1) {
 
 // Stats
 $total_users = $pdo->query("SELECT COUNT(*) FROM Users")->fetchColumn();
-$total_money = $pdo->query("SELECT SUM(balance) FROM Account")->fetchColumn();
-$total_stocks = $pdo->query("SELECT COUNT(*) FROM Stock")->fetchColumn();
-$pending_orders = $pdo->query("SELECT COUNT(*) FROM Orders WHERE status = 'pending'")->fetchColumn();
+$total_money = $pdo->query("SELECT SUM(balance) FROM Accounts")->fetchColumn();
+$total_stocks = $pdo->query("SELECT COUNT(*) FROM Instruments")->fetchColumn();
+$pending_orders = $pdo->query("SELECT COUNT(*) FROM Orders WHERE status = 'PENDING'")->fetchColumn();
 
-// Handle Add Stock
+// Handle Add Instrument (Stock)
 if ($_SERVER['REQUEST_METHOD'] == 'POST' && isset($_POST['action']) && $_POST['action'] == 'create_stock') {
     $t = strtoupper(trim($_POST['ticker_symbol']));
     $c = trim($_POST['company_name']);
-    $b = (int)$_POST['business_id'];
+    $s = trim($_POST['sector']);
     
     // Basic dup check
-    $stmt = $pdo->prepare("SELECT COUNT(*) FROM Stock WHERE ticker_symbol = ?");
+    $stmt = $pdo->prepare("SELECT COUNT(*) FROM Instruments WHERE ticker_symbol = ?");
     $stmt->execute([$t]);
     $exists = $stmt->fetchColumn();
 
     if (!$exists) {
-        $stmt = $pdo->prepare("INSERT INTO Stock(ticker_symbol, company_name, business_id) VALUES(?, ?, ?)");
-        $stmt->execute([$t, $c, $b]);
+        // Insert Instrument
+        $stmt = $pdo->prepare("INSERT INTO Instruments(ticker_symbol, name, sector, current_price, exchange_id) VALUES(?, ?, ?, 100.00, 1)");
+        $stmt->execute([$t, $c, $s]);
         
-        // Initialize price
-        $stmt = $pdo->prepare("INSERT INTO StockPrice(ticker_symbol, current_price, previous_close) VALUES(?, 100.00, 100.00)");
-        $stmt->execute([$t]);
-        
-        $msg = "Stock added: " . htmlspecialchars($t);
+        $msg = "Instrument added: " . htmlspecialchars($t);
     } else {
         $error = "Ticker already exists.";
     }
 }
 
 // Fetch all stocks for management
-$stocks = $pdo->query("SELECT s.*, b.business_name FROM Stock s LEFT JOIN Business b ON s.business_id = b.business_id ORDER BY s.ticker_symbol")->fetchAll();
-$businesses = $pdo->query("SELECT * FROM Business")->fetchAll();
+$stocks = $pdo->query("SELECT * FROM Instruments ORDER BY ticker_symbol")->fetchAll();
+$sectors = ['Technology', 'Healthcare', 'Finance', 'Energy', 'Consumer'];
 
 $page_title = 'Admin Dashboard';
 require 'includes/header.php';
@@ -83,7 +80,7 @@ require 'includes/nav.php';
         <div class="stat-card">
             <div class="stat-icon">📈</div>
             <div class="stat-info">
-                <h3>Listed Stocks</h3>
+                <h3>Listed Instruments</h3>
                 <p class="stat-value"><?= number_format($total_stocks) ?></p>
             </div>
         </div>
@@ -117,8 +114,8 @@ require 'includes/nav.php';
                         <?php foreach ($stocks as $s): ?>
                         <tr>
                             <td><strong><?= htmlspecialchars($s['ticker_symbol']) ?></strong></td>
-                            <td><?= htmlspecialchars($s['company_name']) ?></td>
-                            <td><?= htmlspecialchars($s['business_name'] ?? 'N/A') ?></td>
+                            <td><?= htmlspecialchars($s['name']) ?></td>
+                            <td><?= htmlspecialchars($s['sector'] ?? 'N/A') ?></td>
                             <td>
                                 <button class="btn btn-secondary" style="padding:0.25rem 0.5rem; font-size:0.8rem">Edit</button>
                             </td>
@@ -131,7 +128,7 @@ require 'includes/nav.php';
 
         <!-- Add Stock Form -->
         <div class="card">
-            <h3>Add New Stock</h3>
+            <h3>Add New Instrument</h3>
             <?php if (isset($msg)) echo "<div class='alert alert-success'>$msg</div>"; ?>
             <?php if (isset($error)) echo "<div class='alert alert-error'>$error</div>"; ?>
             
@@ -147,13 +144,13 @@ require 'includes/nav.php';
                 </div>
                 <div class="form-group">
                     <label>Sector</label>
-                    <select name="business_id" required>
-                        <?php foreach ($businesses as $b): ?>
-                            <option value="<?= $b['business_id'] ?>"><?= $b['business_name'] ?></option>
+                    <select name="sector" required>
+                        <?php foreach ($sectors as $b): ?>
+                            <option value="<?= $b ?>"><?= $b ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <button type="submit" class="btn btn-primary" style="width:100%">List Stock</button>
+                <button type="submit" class="btn btn-primary" style="width:100%">List Instrument</button>
             </form>
         </div>
     </div>

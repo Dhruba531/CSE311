@@ -1,0 +1,35 @@
+runtime: php82
+
+env_variables:
+  # Cloud SQL Connection Name (e.g. project:region:instance)
+  # DB_CONNECTION: 'mysql'
+  # DB_SOCKET: '/cloudsql/YOUR_CONNECTION_NAME'
+  
+  # For simple testing with SQLite (Not recommended for production/scaling but works for single instance)
+  DB_CONNECTION: 'sqlite'
+  
+  # SMTP Settings for Gmail
+  # You must set these in the App Engine dashboard or here (not recommended for secrets)
+  # SMTP_USER: 'your_email@gmail.com'
+  # SMTP_PASS: 'your_app_password'
+
+handlers:
+  # Serve static files from /assets
+  - url: /assets
+    static_dir: assets
+
+  # Serve images
+  - url: /images
+    static_dir: images
+
+  # Serve root to index.php
+  - url: /
+    script: auto
+
+  # Serve everything else to PHP scripts
+  - url: /(.+\.php)$
+    script: auto
+
+  # Catch-all for other static files or routing
+  - url: /.*
+    script: auto

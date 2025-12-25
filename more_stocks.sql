@@ -1,0 +1,22 @@
+INSERT INTO Instruments (ticker_symbol, name, sector, exchange_id, current_price) VALUES
+('MSFT', 'Microsoft Corporation', 'Technology', 1, 370.00),
+('GOOGL', 'Alphabet Inc.', 'Technology', 1, 140.00),
+('AMZN', 'Amazon.com Inc.', 'Consumer', 1, 155.00),
+('META', 'Meta Platforms Inc.', 'Technology', 1, 330.00),
+('NFLX', 'Netflix Inc.', 'Consumer', 1, 480.00),
+('NVDA', 'NVIDIA Corporation', 'Technology', 1, 490.00),
+('AMD', 'Advanced Micro Devices', 'Technology', 1, 145.00),
+('INTC', 'Intel Corporation', 'Technology', 1, 45.00),
+('JPM', 'JPMorgan Chase & Co.', 'Finance', 1, 170.00),
+('V', 'Visa Inc.', 'Finance', 1, 260.00),
+('WMT', 'Walmart Inc.', 'Consumer', 1, 155.00),
+('DIS', 'The Walt Disney Company', 'Consumer', 1, 92.00),
+('KO', 'The Coca-Cola Company', 'Consumer', 1, 58.00),
+('PEP', 'PepsiCo Inc.', 'Consumer', 1, 168.00),
+('PFE', 'Pfizer Inc.', 'Healthcare', 1, 28.00),
+('JNJ', 'Johnson & Johnson', 'Healthcare', 1, 155.00),
+('XOM', 'Exxon Mobil Corporation', 'Energy', 1, 100.00),
+('CVX', 'Chevron Corporation', 'Energy', 1, 150.00),
+('BA', 'The Boeing Company', 'Industrials', 1, 260.00),
+('CAT', 'Caterpillar Inc.', 'Industrials', 1, 290.00)
+ON DUPLICATE KEY UPDATE current_price = VALUES(current_price);

@@ -29,8 +29,8 @@ services:
     volumes:
       - db_data:/var/lib/mysql
       # Auto-init database with our scripts
-      - ./final_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
-      - ./add_dummy_data.sql:/docker-entrypoint-initdb.d/02_data.sql
+      - ./ibkr_schema.sql:/docker-entrypoint-initdb.d/01_schema.sql
+      - ./seed_ibkr.sql:/docker-entrypoint-initdb.d/02_data.sql
     networks:
       - stock-network
 
